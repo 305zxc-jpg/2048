@@ -6,15 +6,21 @@ function GameManager(size, InputManager, Actuator, StorageManager) {
 
   this.startTiles     = 2;
 
+  this.timeLimit      = 60; // Seconds allowed in timed mode
+  this.timedMode      = false;
+  this.timer          = null;
+
   this.inputManager.on("move", this.move.bind(this));
   this.inputManager.on("restart", this.restart.bind(this));
   this.inputManager.on("keepPlaying", this.keepPlaying.bind(this));
+  this.inputManager.on("toggleMode", this.toggleMode.bind(this));
 
   this.setup();
 }
 
 // Restart the game
 GameManager.prototype.restart = function () {
+  this.stopTimer();
   this.storageManager.clearGameState();
   this.actuator.continueGame(); // Clear the game won/lost message
   this.setup();
@@ -26,14 +32,62 @@ GameManager.prototype.keepPlaying = function () {
   this.actuator.continueGame(); // Clear the game won/lost message
 };
 
+// Switch between classic and 60 second timed mode, starting a fresh game
+GameManager.prototype.toggleMode = function () {
+  this.timedMode = !this.timedMode;
+  this.restart();
+};
+
+// Start the countdown (called on the first move of a timed game)
+GameManager.prototype.startTimer = function () {
+  var self = this;
+
+  this.timerEnd = Date.now() + this.timeLimit * 1000;
+  this.timer = setInterval(function () {
+    self.tick();
+  }, 100);
+};
+
+GameManager.prototype.stopTimer = function () {
+  if (this.timer) {
+    clearInterval(this.timer);
+    this.timer = null;
+  }
+};
+
+// Update the remaining time and end the game when it runs out
+GameManager.prototype.tick = function () {
+  this.timeLeft = Math.max(0, (this.timerEnd - Date.now()) / 1000);
+
+  if (this.timeLeft <= 0) {
+    this.stopTimer();
+    this.timeUp = true;
+    this.actuate();
+  } else {
+    this.actuator.updateTimer(this.timerInfo());
+  }
+};
+
+GameManager.prototype.timerInfo = function () {
+  return {
+    timed:    this.timedMode,
+    timeLeft: this.timeLeft,
+    limit:    this.timeLimit
+  };
+};
+
 // Return true if the game is lost, or has won and the user hasn't kept playing
 GameManager.prototype.isGameTerminated = function () {
-  return this.over || (this.won && !this.keepPlaying);
+  return this.over || this.timeUp || (this.won && !this.keepPlaying);
 };
 
 // Set up the game
 GameManager.prototype.setup = function () {
-  var previousState = this.storageManager.getGameState();
+  // Timed games always start fresh; saved games belong to classic mode
+  var previousState = this.timedMode ? null : this.storageManager.getGameState();
+
+  this.timeUp   = false;
+  this.timeLeft = this.timeLimit;
 
   // Reload the game from a previous game if present
   if (previousState) {
@@ -48,7 +102,8 @@ GameManager.prototype.setup = function () {
     this.score       = 0;
     this.over        = false;
     this.won         = false;
-    this.keepPlaying = false;
+    // In timed mode reaching 2048 doesn't stop the clock
+    this.keepPlaying = this.timedMode;
 
     // Add the initial tiles
     this.addStartTiles();
@@ -81,8 +136,14 @@ GameManager.prototype.actuate = function () {
     this.storageManager.setBestScore(this.score);
   }
 
-  // Clear the state when the game is over (game over only, not win)
-  if (this.over) {
+  // Stop the clock once the board is stuck
+  if (this.over) this.stopTimer();
+
+  // Clear the state when the game is over (game over only, not win).
+  // Timed games are never saved.
+  if (this.timedMode) {
+    // Nothing to save
+  } else if (this.over) {
     this.storageManager.clearGameState();
   } else {
     this.storageManager.setGameState(this.serialize());
@@ -92,6 +153,8 @@ GameManager.prototype.actuate = function () {
     score:      this.score,
     over:       this.over,
     won:        this.won,
+    timeUp:     this.timeUp,
+    timer:      this.timerInfo(),
     bestScore:  this.storageManager.getBestScore(),
     terminated: this.isGameTerminated()
   });
@@ -180,6 +243,8 @@ GameManager.prototype.move = function (direction) {
   });
 
   if (moved) {
+    if (this.timedMode && !this.timer) this.startTimer();
+
     this.addRandomTile();
 
     if (!this.movesAvailable()) {

@@ -3,6 +3,11 @@ function HTMLActuator() {
   this.scoreContainer   = document.querySelector(".score-container");
   this.bestContainer    = document.querySelector(".best-container");
   this.messageContainer = document.querySelector(".game-message");
+  this.finalScore       = document.querySelector(".final-score");
+  this.timerBar         = document.querySelector(".timer-bar");
+  this.timerLabel       = document.querySelector(".timer-label");
+  this.timerProgress    = document.querySelector(".timer-progress");
+  this.modeButton       = document.querySelector(".mode-button");
 
   this.score = 0;
 }
@@ -23,9 +28,12 @@ HTMLActuator.prototype.actuate = function (grid, metadata) {
 
     self.updateScore(metadata.score);
     self.updateBestScore(metadata.bestScore);
+    self.updateTimer(metadata.timer);
 
     if (metadata.terminated) {
-      if (metadata.over) {
+      if (metadata.timer.timed && (metadata.timeUp || metadata.over)) {
+        self.timedMessage(metadata.timeUp, metadata.score);
+      } else if (metadata.over) {
         self.message(false); // You lose
       } else if (metadata.won) {
         self.message(true); // You win!
@@ -132,8 +140,42 @@ HTMLActuator.prototype.message = function (won) {
   this.messageContainer.getElementsByTagName("p")[0].textContent = message;
 };
 
+// Show the end of a timed game with the final score
+HTMLActuator.prototype.timedMessage = function (timeUp, score) {
+  this.messageContainer.classList.add("game-timeup");
+  this.messageContainer.getElementsByTagName("p")[0].textContent =
+    timeUp ? "Time's up!" : "Game over!";
+  this.finalScore.textContent = "Final score: " + score;
+};
+
+// Show the remaining time (timed mode) or the mode label (classic)
+HTMLActuator.prototype.updateTimer = function (timer) {
+  if (timer.timed) {
+    var seconds = Math.ceil(timer.timeLeft);
+
+    this.timerBar.classList.add("timed");
+    this.timerLabel.textContent = "Time left: " + seconds + "s";
+    this.timerProgress.style.width = (timer.timeLeft / timer.limit * 100) + "%";
+    this.modeButton.textContent = "Classic";
+
+    if (seconds <= 10) {
+      this.timerBar.classList.add("hurry");
+    } else {
+      this.timerBar.classList.remove("hurry");
+    }
+  } else {
+    this.timerBar.classList.remove("timed");
+    this.timerBar.classList.remove("hurry");
+    this.timerLabel.textContent = "Classic mode";
+    this.timerProgress.style.width = "0";
+    this.modeButton.textContent = "60s Mode";
+  }
+};
+
 HTMLActuator.prototype.clearMessage = function () {
   // IE only takes one value to remove at a time.
   this.messageContainer.classList.remove("game-won");
   this.messageContainer.classList.remove("game-over");
+  this.messageContainer.classList.remove("game-timeup");
+  this.finalScore.textContent = "";
 };

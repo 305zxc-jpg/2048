@@ -756,3 +756,77 @@ hr {
     margin-top: 90px !important; }
   .game-message .lower {
     margin-top: 30px !important; } }
+
+/* 60 second timed mode */
+.timer-bar {
+  position: relative;
+  overflow: hidden;
+  margin-top: 20px;
+  height: 40px;
+  line-height: 40px;
+  padding: 0 0 0 15px;
+  background: #eee4da;
+  border-radius: 3px;
+  font-weight: bold; }
+  .timer-bar .timer-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 0;
+    background: #edc22e;
+    -webkit-transition: width 100ms linear;
+    -moz-transition: width 100ms linear;
+    transition: width 100ms linear; }
+  .timer-bar .timer-label {
+    position: relative;
+    z-index: 1; }
+  .timer-bar .mode-button {
+    position: relative;
+    z-index: 1;
+    float: right;
+    display: block;
+    background: #8f7a66;
+    border-radius: 3px;
+    padding: 0 20px;
+    text-decoration: none;
+    color: #f9f6f2;
+    height: 40px;
+    line-height: 42px; }
+  .timer-bar.timed {
+    color: #f9f6f2;
+    background: #bbada0; }
+  .timer-bar.hurry .timer-progress {
+    background: #f65e3b; }
+
+.game-container .game-message .final-score {
+  display: none;
+  font-size: 30px;
+  font-weight: bold;
+  margin-top: 25px; }
+
+.game-container .game-message.game-timeup {
+  display: block;
+  background: rgba(237, 194, 46, 0.5);
+  color: #f9f6f2; }
+  .game-container .game-message.game-timeup p {
+    margin-top: 150px; }
+  .game-container .game-message.game-timeup .final-score {
+    display: block; }
+  .game-container .game-message.game-timeup .lower {
+    margin-top: 40px; }
+
+@media screen and (max-width: 520px) {
+  .timer-bar {
+    margin-top: 10px;
+    font-size: 14px;
+    padding-left: 10px; }
+    .timer-bar .mode-button {
+      padding: 0 12px; }
+  .game-container .game-message .final-score {
+    font-size: 20px;
+    margin-top: 15px; }
+  .game-container .game-message.game-timeup p {
+    margin-top: 60px !important; }
+  .game-container .game-message.game-timeup .lower {
+    margin-top: 20px; } }
